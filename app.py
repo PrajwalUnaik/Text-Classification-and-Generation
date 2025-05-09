@@ -14,7 +14,6 @@ from transformers import (
 # ============================
 # Load Models and Artifacts
 # ============================
-
 @st.cache_resource
 def load_classifier():
     model = RobertaForSequenceClassification.from_pretrained(
@@ -47,7 +46,6 @@ def load_label_map():
 # ============================
 # Inference Functions
 # ============================
-
 def predict_category(text, model, tokenizer, inv_label_map):
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True)
     with torch.no_grad():
@@ -61,18 +59,16 @@ def generate_answer(prompt, model, tokenizer):
         input_ids,
         max_new_tokens=60,
         pad_token_id=tokenizer.eos_token_id,
-        do_sample=False,  # Use greedy decoding for deterministic output
-        num_beams=1,      # No beam search
+        do_sample=False,
+        num_beams=1,
         temperature=0.7,
         top_p=0.9
     )
     decoded = tokenizer.decode(output[0], skip_special_tokens=True)
-    # Extract only the part after the prompt
     if prompt in decoded:
         answer = decoded.split(prompt)[-1].strip()
     else:
         answer = decoded.strip()
-    # Post-process: stop at first line or punctuation
     for sep in [".", "\n", "Q:", "A:"]:
         if sep in answer:
             answer = answer.split(sep)[0].strip()
@@ -82,7 +78,6 @@ def generate_answer(prompt, model, tokenizer):
 # ============================
 # Streamlit UI
 # ============================
-
 st.set_page_config(page_title="NLP Interview Analyzer", layout="wide")
 
 st.title("🧠 NLP Interview Analyzer")
@@ -112,8 +107,23 @@ if st.button("🔍 Predict Category") and user_input:
 # Section 2: QA Generation
 st.markdown("---")
 st.header("💡 Category-Based Q&A Generator")
-categories = list(label_map.keys())
-selected_category = st.selectbox("Select a category", categories)
+
+# User-friendly labels
+readable_labels = {
+    "Game Strategy": "game_strategy",
+    "Player Performance": "player_performance",
+    "Injury Updates": "injury_updates",
+    "Post-Game Analysis": "post_game_analysis",
+    "Team Morale": "team_morale",
+    "Upcoming Matches": "upcoming_matches",
+    "Off-Game Matters": "off_game_matters",
+    "Controversies": "controversies"
+}
+
+readable_names = list(readable_labels.keys())
+selected_readable = st.selectbox("Select a category", readable_names)
+selected_category = readable_labels[selected_readable]
+
 question = st.text_input("Enter your question")
 if st.button("✨ Generate Answer") and question:
     prompt = f"Category: {selected_category}\nQ: {question}\nA:"
